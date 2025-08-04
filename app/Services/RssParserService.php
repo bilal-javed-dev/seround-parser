@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 class RssParserService
 {
-    public function parse(string $feedUrl, string $keyword = 'Google'): array
+    public function parse(string $feedUrl, string $keyword = 'Google', ?string $fromDate = null, ?string $toDate = null): array
     {
         $response = Http::get($feedUrl);
 
@@ -21,6 +21,14 @@ class RssParserService
         $occurrences = [];
 
         foreach ($items as $item) {
+            $pubDate = new \DateTime((string)$item->pubDate);
+            if (
+                ($fromDate && $pubDate->format('Y-m-d') < (new \DateTime($fromDate))->format('Y-m-d')) ||
+                ($toDate && $pubDate->format('Y-m-d') > (new \DateTime($toDate))->format('Y-m-d'))
+            ) {
+                continue;
+            }
+
             $title = (string) $item->title;
             $description = (string) $item->description;
 
@@ -33,7 +41,8 @@ class RssParserService
                 $highlightedDesc = $this->highlightWord($description, $keyword);
                 $occurrences[] = [
                     'title' => $highlightedTitle,
-                    'description' => $highlightedDesc
+                    'description' => $highlightedDesc,
+                    'pubDate' => $pubDate->format('c')
                 ];
             }
         }
